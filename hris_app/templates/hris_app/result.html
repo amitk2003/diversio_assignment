@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Preview — {{ filename }} — Diversio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f6f9;
+      color: #222;
+      padding: 2rem;
+    }
+
+    a { color: #4f46e5; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.2rem;
+    }
+
+    .meta {
+      color: #666;
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    /* ---- Summary cards ---- */
+    .summary-grid {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .summary-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      padding: 1.1rem 1.5rem;
+      min-width: 130px;
+      text-align: center;
+    }
+
+    .summary-card .number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #4f46e5;
+      line-height: 1;
+    }
+
+    .summary-card .label {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 0.3rem;
+    }
+
+    .summary-card.warn .number { color: #d97706; }
+    .summary-card.danger .number { color: #dc2626; }
+    .summary-card.ok .number { color: #16a34a; }
+
+    /* ---- Sections ---- */
+    .section {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 1.25rem;
+      background: #f8f8fb;
+      border-bottom: 1px solid #e8e8ee;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+    .badge-red    { background: #fee2e2; color: #b91c1c; }
+    .badge-amber  { background: #fef3c7; color: #92400e; }
+    .badge-green  { background: #dcfce7; color: #166534; }
+    .badge-blue   { background: #dbeafe; color: #1e40af; }
+
+    .section-body { padding: 0; }
+
+    /* ---- Tables ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.55rem 1.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #888;
+      background: #fafafa;
+      border-bottom: 1px solid #f0f0f4;
+    }
+
+    td {
+      padding: 0.6rem 1.25rem;
+      border-bottom: 1px solid #f4f4f8;
+      color: #333;
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f9f9fc; }
+
+    /* ---- Empty state ---- */
+    .empty {
+      padding: 1.2rem 1.25rem;
+      color: #888;
+      font-size: 0.875rem;
+      font-style: italic;
+    }
+
+    /* ---- Cycle warning banner ---- */
+    .cycle-banner {
+      background: #fff7ed;
+      border-left: 4px solid #f59e0b;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      color: #92400e;
+    }
+
+    /* ---- Back link ---- */
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+
+    .row-num {
+      font-family: monospace;
+      color: #888;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="/">← Upload another file</a>
+
+  <h1>Import Preview</h1>
+  <p class="meta">File: <strong>{{ filename }}</strong></p>
+
+  <!-- ===== Summary Cards ===== -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="number">{{ total_rows }}</div>
+      <div class="label">Source rows</div>
+    </div>
+    <div class="summary-card ok">
+      <div class="number">{{ accepted_count }}</div>
+      <div class="label">Accepted</div>
+    </div>
+    {% if rejected_count > 0 %}
+    <div class="summary-card danger">
+      <div class="number">{{ rejected_count }}</div>
+      <div class="label">Rejected</div>
+    </div>
+    {% endif %}
+    {% if validation_errors %}
+    <div class="summary-card warn">
+      <div class="number">{{ validation_errors|length }}</div>
+      <div class="label">Identity errors</div>
+    </div>
+    {% endif %}
+    {% if manager_errors %}
+    <div class="summary-card warn">
+      <div class="number">{{ manager_errors|length }}</div>
+      <div class="label">Manager errors</div>
+    </div>
+    {% endif %}
+    {% if cycle_members %}
+    <div class="summary-card danger">
+      <div class="number">{{ cycle_members|length }}</div>
+      <div class="label">Cycle members</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ===== Identity Validation Errors ===== -->
+  <div class="section">
+    <div class="section-header">
+      Row-level Validation Errors
+      <span class="badge badge-red">{{ validation_errors|length }}</span>
+    </div>
+    <div class="section-body">
+      {% if validation_errors %}
+      <table>
+        <thead>
+          <tr>
+            <th>Row #</th>
+            <th>Field</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for err in validation_errors %}
+          <tr>
+            <td class="row-num">{{ err.row_num }}</td>
+            <td>{{ err.field }}</td>
+            <td>{{ err.message }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No identity validation errors found.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ===== Manager Errors ===== -->
+  <div class="section">
+    <div class="section-header">
+      Manager Resolution Errors
+      <span class="badge badge-amber">{{ manager_errors|length }}</span>
+    </div>
+    <div class="section-body">
+      {% if manager_errors %}
+      <table>
+        <thead>
+          <tr>
+            <th>Row #</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row_num, msg in manager_errors %}
+          <tr>
+            <td class="row-num">{{ row_num }}</td>
+            <td>{{ msg }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No manager resolution errors.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ===== Root Employees ===== -->
+  <div class="section">
+    <div class="section-header">
+      Root Employees (no manager)
+      <span class="badge badge-blue">{{ roots|length }}</span>
+    </div>
+    <div class="section-body">
+      {% if roots %}
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Department</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in roots %}
+          <tr>
+            <td>{{ emp.employee_id }}</td>
+            <td>{{ emp.employee_name }}</td>
+            <td>{{ emp.email }}</td>
+            <td>{{ emp.department }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No root employees (all accepted employees have a manager).</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ===== Managers and Direct Report Counts ===== -->
+  <div class="section">
+    <div class="section-header">
+      Managers and Direct-Report Counts
+      <span class="badge badge-purple">{{ managers_with_reports|length }}</span>
+    </div>
+    <div class="section-body">
+      {% if managers_with_reports %}
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Department</th>
+            <th style="text-align:right;">Direct Reports</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in managers_with_reports %}
+          <tr>
+            <td>{{ item.employee.employee_id }}</td>
+            <td>{{ item.employee.employee_name }}</td>
+            <td>{{ item.employee.email }}</td>
+            <td>{{ item.employee.department }}</td>
+            <td style="text-align:right; font-weight:600;">{{ item.direct_reports }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No managers with direct reports found.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ===== Reporting Cycles ===== -->
+  <div class="section">
+    <div class="section-header">
+      Reporting Cycle Members
+      <span class="badge {% if cycle_members %}badge-red{% else %}badge-green{% endif %}">
+        {{ cycle_members|length }}
+      </span>
+    </div>
+    <div class="section-body">
+      {% if cycle_members %}
+      <div class="cycle-banner">
+        ⚠ The following employees are part of a circular reporting chain.
+        They cannot be imported until the cycle is resolved.
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Department</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in cycle_members %}
+          <tr>
+            <td>{{ emp.employee_id }}</td>
+            <td>{{ emp.employee_name }}</td>
+            <td>{{ emp.email }}</td>
+            <td>{{ emp.department }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No reporting cycles detected.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</body>
+</html>
